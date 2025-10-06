@@ -233,3 +233,90 @@ map("n", "[e", function()
 end, { silent = true })
 map("n", "]r", "<cmd>CocNext<cr>", { desc = "Coc Next" })
 map("n", "[r", "<cmd>CocPrev<cr>", { desc = "Coc Previous" })
+
+-- Quick log entry with Timeline > Month > Day structure
+vim.keymap.set("n", "<leader>wl", function()
+  local log_file = vim.fn.expand("~/work-log.md")
+  local entry = vim.fn.input("Log entry: ")
+
+  if entry ~= "" then
+    -- Read file
+    local lines = {}
+    if vim.fn.filereadable(log_file) == 1 then
+      lines = vim.fn.readfile(log_file)
+    else
+      lines = { "# Work Log", "" }
+    end
+
+    -- Check for Timeline header
+    local has_timeline = false
+    for _, line in ipairs(lines) do
+      if line:match("^# Timeline") then
+        has_timeline = true
+        break
+      end
+    end
+
+    if not has_timeline then
+      table.insert(lines, "")
+      table.insert(lines, "# Timeline")
+      table.insert(lines, "")
+    end
+
+    -- Check for month header
+    local month_header = "## " .. os.date("%B %Y")
+    local has_month = false
+    for _, line in ipairs(lines) do
+      if line == month_header then
+        has_month = true
+        break
+      end
+    end
+
+    if not has_month then
+      table.insert(lines, month_header)
+      table.insert(lines, "")
+    end
+
+    -- Check for date header
+    local date_header = "### " .. os.date("%Y-%m-%d (%A)")
+    local has_today = false
+    for _, line in ipairs(lines) do
+      if line == date_header then
+        has_today = true
+        break
+      end
+    end
+
+    if not has_today then
+      table.insert(lines, date_header)
+      table.insert(lines, "")
+    end
+
+    -- Add entry with proper spacing
+    local timestamp = "**" .. os.date("%I:%M %p") .. "** - "
+
+    -- Ensure there's a blank line before the new entry if needed
+    -- Check if last line is a timestamp entry (starts with **) or is not empty
+    if #lines > 0 then
+      local last_line = lines[#lines]
+      if last_line ~= "" and (last_line:match("^%*%*") or last_line ~= "") then
+        table.insert(lines, "")
+      end
+    end
+
+    table.insert(lines, timestamp .. entry)
+    table.insert(lines, "")
+
+    -- Write file
+    vim.fn.writefile(lines, log_file)
+    print(" ✓ Logged: " .. entry)
+  end
+end, { desc = "Add work log entry" })
+
+-- Open at Timeline section
+vim.keymap.set("n", "<leader>wo", function()
+  vim.cmd("e ~/work-log.md")
+  vim.fn.search("^# Timeline")
+  vim.cmd("normal! zz")
+end, { desc = "Open work log at Timeline" })
